@@ -1,0 +1,111 @@
+Lab 3 
+
+1 Entenda tudo o que o cliente precisa;
+2 Elabore um desenho com o fluxo que a informação vai percorrer: origem da informação, banco de dados e tabelas que serão utilizadas para armazenar a informação. 
+3 Montar uma especificação Funcional explicando todo o processo a ser desenvolvido.
+4 Crie um schema no SQL Server chamado STAGE_<SEU NOME>;
+5 Crie um schema no SQL Server chamado DW_<SEU NOME>;
+6 Desenvolver o ETL ou EL para fazer a primeira ingestão: do Blob para o SQL Serve.
+7 Desenvolver uma PROCEDURE para popular as tabelas finais: do SQL Server(schema STAGE) para o SQL Server(schema DW).
+8 Desenvolver no PowerBI as visões que atendam as necessidades apresentadas pela empresa.
+
+SQL SERVER:
+
+Criar SCHEMA
+
+CREATE SCHEMA [STAGE_LUIZ_SAPORI]
+CREATE SCHEMA [DW_LUIZ_SAPORI]
+
+
+Criando tablela STAGE
+
+CREATE TABLE [STAGE_LUIZ_SAPORI].[ORDERS](REGION VARCHAR(MAX),COUNTRY VARCHAR(MAX),ITEM_TYPE VARCHAR(MAX),SALES_CHANNEL VARCHAR(MAX), 
+ORDER_PRIORITY VARCHAR(MAX), ORDER_DATE VARCHAR(MAX), ORDER_ID VARCHAR(MAX), SHIP_DATE VARCHAR(MAX), 
+UNITS_SOLD VARCHAR(MAX), UNIT_PRICE VARCHAR(MAX), UNIT_COST VARCHAR(MAX),TOTAL_REVENUE VARCHAR(MAX),TOTAL_COST VARCHAR(MAX), TOTAL_PROFIT VARCHAR(MAX));
+
+Criando tablela DW
+
+Tabela Dimensão com as regiões:
+CREATE TABLE [DW_LUIZ_SAPORI].[DIM_REGION](REGION VARCHAR(MAX))
+
+Tabela Dimensão com Canais de Vendas:
+CREATE TABLE [DW_LUIZ_SAPORI].[DIM_SALES_CHANNEL](CHANNEL VARCHAR(MAX))
+
+Tabela Dimensão com país:
+CREATE TABLE [DW_LUIZ_SAPORI].[DIM_COUNTRY](COUNTRY VARCHAR(MAX))
+
+Fato com as vendas:
+CREATE TABLE [DW_LUIZ_SAPORI].[FATO_VENDAS](COUNTRY VARCHAR(MAX),REGION VARCHAR(MAX), 
+SALES_CHANNEL VARCHAR(MAX), ITEM_TYPE VARCHAR(MAX),ORDER_DATE VARCHAR(MAX),UNITS_SOLD VARCHAR(MAX),
+TOTAL_REVENUE VARCHAR(MAX),TOTAL_COST VARCHAR(MAX), TOTAL_PROFIT VARCHAR(MAX))
+
+CREATE PROCEDURE STORE
+
+CREATE PROCEDURE [DW_LUIZ_SAPORI].[ORDERS_LAB3_FINAL]
+AS
+BEGIN
+
+TRUNCATE TABLE [DW_LUIZ_SAPORI].[DIM_REGION]
+TRUNCATE TABLE [DW_LUIZ_SAPORI].[DIM_SALES_CHANNEL]
+TRUNCATE TABLE [DW_LUIZ_SAPORI].[DIM_COUNTRY]
+TRUNCATE TABLE [DW_LUIZ_SAPORI].[FATO_VENDAS]
+
+begin transaction (Iniciar as tratativas para que não haja nada duplicado)
+
+INSERT INTO [DW_LUIZ_SAPORI].[FATO_VENDAS](REGION,
+COUNTRY,
+ITEM_TYPE,
+SALES_CHANNEL,
+ORDER_PRIORITY,
+ORDER_DATE,
+ORDER_ID,
+SHIP_DATE,
+UNITS_SOLD, 
+UNIT_PRICE, 
+UNIT_COST,
+TOTAL_REVENUE,
+TOTAL_COST,
+TOTAL_PROFIT)
+
+SELECT REGION,
+COUNTRY,
+ITEM_TYPE,
+SALES_CHANNEL,
+ORDER_PRIORITY,
+ORDER_DATE,
+ORDER_ID,
+SHIP_DATE,
+UNITS_SOLD,
+CAST(REPLACE(UNIT_PRICE, ',','.') AS float),
+CAST(REPLACE(UNIT_COST, ',', '.') AS float),
+CAST(REPLACE(TOTAL_REVENUE, ',', '.') AS float),
+CAST(REPLACE(TOTAL_COST, ',', '.') AS float),
+CAST(REPLACE(TOTAL_PROFIT, ',', '.') AS float)
+FROM [STAGE_LUIZ_SAPORI].[ORDERS]
+
+INSERT INTO [DW_LUIZ_SAPORI].[DIM_REGION]
+SELECT REGION FROM [DW_LUIZ_SAPORI].[FATO_VENDAS]
+
+INSERT INTO [DW_LUIZ_SAPORI].[DIM_SALES_CHANNEL]
+SELECT SALES_CHANNEL FROM [DW_LUIZ_SAPORI].[FATO_VENDAS]
+
+INSERT INTO [DW_LUIZ_SAPORI].[DIM_COUNTRY]
+SELECT COUNTRY FROM [DW_LUIZ_SAPORI].[FATO_VENDAS]
+
+TRUNCATE TABLE [STAGE_LUIZ_SAPORI].[ORDERS]
+
+commit 
+
+END
+
+
+POWER BI
+
+Especificação para construçãos dos dashboard em Power BI
+
+VENDAS = quantidade de itens multiplicados pelo valor do item.
+
+O acumulado de vendas do último ano por Região e País. Ele gostaria de ter essa visão através de um Mapa Mundial diretamente no Relatório.
+Quantidade de vendas dos últimos 10 dias através de um gráfico de colunas.
+Quantidade de vendas e a Quantidade acumulada de vendas dos últimos 30 dias.
+Uma visão acumulada das vendas do último ano por Canal e País. De forma que seja possível ver a distribuição das vendas um determinado país por canal.
